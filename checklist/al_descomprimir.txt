@@ -1,0 +1,46 @@
+OK 1. Se descomprimen los archivos
+
+OK 2. A veces dentro de los archivos zip viene carpetas, se le cortan los archivos, se ponen en la raíz para entren en las validaciones
+
+OK 3. Cada pago viene acompañado de 2 archivos planos, los archivos planos que tengan en el nombre del archivo la letra A se deben eliminar.
+
+OK 4. Los archivos que en el nombre venga la palaba IP se tendrá que cortar el archivo y pegarlo en  una carpeta de pensionados, ya que la estructura de estos archivos es muy diferente.
+
+OK 5. Se procede con el borrado de los archivos zip
+
+6. Se valida que el archivo no venga vacio
+
+OK 7. Se valida que en la posición 9,9 venga el nit  800224827 o 800229739, esto se hacen el registro  tipo 1
+
+OK 8. Para el registro tipo 2 se valida que en la posición x,x venga un punto
+
+OK 9. El archivo debe de venir con 3 tipo 3 y cada 3 debe de venir acompañado de un código
+a. Posicion 6,1 =3 posicion 1,5= 00031
+b. Posicion 6,1 =3 posicion 1,5= 00036
+c. Posicion 6,1 =3 posicion 1,5= 00039
+Todos los archivos deben de cumplir con este requisito, sino es causal de rechazo
+
+10. Si el archivo no pasa las validaciones, este no se procesa y se hace un into a la tabla devueltas
+La información que va en el into es la que se encuentra en el nombre del archivo
+
+11. Del registro tipo 1 se saca variables que son únicas para el manejo de los archivos de pila
+substr(path,226,2) as tipocc
+substr(path,228,16) as id_empresa
+substr(path,371,7) as periodo
+substr(path,395,10) as fechapago
+ substr(path,415,10) as planilla 
+substr(path,486,2) as operador
+
+12. Del registro tipo 3 y 3 posicion 1,5= 00039 se san los datos de valor
+substr(path,1,5) as total_pagar
+substr(path,6,1) as tipo_registro
+substr(path,7,10) as total_cot
+substr(path,17,10) as fsp
+substr(path,27,10) as fspsub
+
+13. teniendo estos datos se procede hacer consulta en la tabla radicado por los campos
+id_empresa, periodo, fechapago, total_cot, fsp, fspsub y planilla
+Si el resultado es positivo se elimina el archivo, esto quiere decir que ya se procesó el archivo
+Esto se da porque el operador a veces radica el mismo archivo varias veces
+
+14. si el archivo paso el punto 13 se valida que  no se encuentre en la tabla devueltas, si esta se procede hacer actualizaciones para saber  cuándo llego el archivo corregido

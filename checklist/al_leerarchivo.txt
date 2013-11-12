@@ -1,0 +1,7 @@
+1.	Se inserta la información de los archivos en tablas
+
+2.	Se hace into en la tabla radicado (esta es la tabla madre del proceso pila), la información se saca de los registros tipo 1 y tipo 3 con 39
+
+3.	Se inserta registro en la tabla de imágenes de protección
+
+4.	Se hace validación del mail y si está en un formato correcto se borra el mail que se tenga para ese nit y se hace into del nuevo correo esto es en la tabla pila_correos, este correo se necesita para enviar los mail de certificación a las empresas

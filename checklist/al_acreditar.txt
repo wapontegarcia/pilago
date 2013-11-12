@@ -1,0 +1,127 @@
+1.	Como el archivo plano llega con inconsistencias se hacen update sobre el registro tipo 1
+OK	Si el tipo_aportante llega vacio se actualiza a 1
+OK	Si el tipo_planilla llega vacio se actualiza a E
+OK	Si presentacion llega diferente a ('U','C','D') se actualiza a U
+OK	Si tipo_planilla es igual a ('T','F','P') se actualiza a E
+OK	Si teléfono llega vacio se actualiza a 0
+OK	Si fax llega vacio se actualiza a 0
+OK	Si dirección llega vacio se actualiza a NO REPORTA
+Estas actualizaciones se hacen cuando el estado del registro tipo 1 es igual a 0
+
+2.	Si el count de los registros tipo 2 son iguales a 1 
+y el id_empresa  (registro tipo 1) es igual al id_afiliado (registros tipo 2) 
+OK •	se actualiza en el registro tipo 2 el campo tipo_cotizante='3' y
+OK •	se actualiza en el registro tipo 1 los campos tipo_aportante='2',tipo_planilla='I'
+para esta misma validación, en el registro tipo 2 que si el campo cotizacion_voluntaria_aportante > 0, se deben hacer las siguientes actualizaciones
+Ok •	al campo cotizacion_voluntaria_af sumarle lo que tenga el campo cotizacion_voluntaria_af + cotizacion_voluntaria_aportante
+OK	y al campo cotizacion_voluntaria_aportante igualarlo a 0
+para esta misma validación, en el registro tipo 2 si los campos
+OK •	ret tiene marcado una X esta se debe de eliminar
+
+
+3.	si el tipo_planilla= I y presenta novedades de ING o RET estas deben ser eliminadas
+
+OK 4.	En el registro tipo 1 se valida el tipo_planilla si esta es R el archivo no se procesa, se genera reporte a protección
+
+OK 5.	En el registro tipo 1 se valida el tipo_planilla si esta es L el archivo no se procesa, se genera reporte a protección
+
+OK 6.	Validaciones tipo_planilla = Y
+Se valida contra la tabla de terceros que dara protección. Si el nit existe se procede con el cargue si no se genera rechazo del aporte, se genera reporte para creación de empresas en as400 y posterior reproceso del pago
+
+7.	Validaciones tipo_planilla = J y tipo_planilla = X
+Estos tipos de planillas tiene un trato especial, en estas la tarifa puede ser menor al 16 % el salario puede ser menor al mínimo.
+La generación de plano de estas planillas va hacer aparte del proceso de las otras planillas
+
+8.	Si el tipo_aportante <>Y se valida que la empresa exista en la tabla tblempleadoresliq, sino se genera rechazo (Revisar punto 6, es el mismo??)
+
+OK 9.	Si alguno de los siguientes campos llegan nulos se envía a rechazo el aporte tipoid_empresa, cod_ciudad, cod_departamento o periodo	
+
+10.	Se hace el proceso de conciliación, estos son los pasos a realizar
+
+///////////////////////////////////////////////////////
+•	Del registro tipo 3 se suman 3 con 39 campos total_cot + fsp + fspsub 
+•	Del registro tipo 1 se toman los campos id_empresa , fechapago, planilla
+Con estos campos se hace consulta en la tabla donde se cargo el log bancario (tbllogbancario)
+A la consulta se le adicionan estos datos fijos conciliado='0' and codigobanco = '007' and oficina = '9999', que son datos que signifique que el pago es de pila
+El sql seria (SELECT * FROM tbllogbancario WHERE documentoid='$arr[id_empresa]' AND valortotal='$total' AND fechapago='$arr[fechapago]' and radicado='$arr[planilla]' AND conciliado='0' and codigobanco = '007' and oficina = '9999')
+Si lo encontró una vez se hace actualización en la tabla tbllogbancario, de los campos planilla, sr, conciliado, lote, fechaconc y usuarioconc
+
+///////////////////////////////////////////////////////
+Si no se encuentra registro se hace esta validación
+Cuando la empresa realiza el pago a veces en el nit ingresan el digito de verificación, 
+En la tabla tbllogbancario esta el nit largo y en el archivo plano nos llega el nit correcto, lo que se hace es un like al nit documentoid like '$arr[id_empresa]%'
+Si lo encontró una vez se hace actualización en la tabla tbllogbancario, de los campos planilla, sr, conciliado, lote, fechaconc, usuarioconc y documentoid
+Los otros campos de la consultan quedan iguales
+
+///////////////////////////////////////////////////////
+Si no se encuentra registro se hace esta validación
+En la consulta no se tiene en cuenta el nit, pero concatena el operador y la planilla ($plani)
+(SELECT * FROM tbllogbancario WHERE radicado='$plani' AND valortotal='$total' AND fechapago='$arr[fechapago]' AND conciliado='0' and codigobanco = '007' and oficina = '9999')
+Si lo encontró una vez se hace actualización en la tabla tbllogbancario, de los campos planilla, sr, conciliado, lote, fechaconc, usuarioconc y documentoid
+
+  ///////////////////////////////////////////////////////
+Si no se encuentra registro se hace esta validación
+En la consulta no se tiene en cuenta la fecha de pago y el nit se consulta con like
+(select * from tbllogbancario where documentoid like '$arr[id_empresa]%' and radicado='$arr[planilla]' and valortotal='$total' and conciliado='0' and codigobanco = '007' and  oficina = '9999')
+Si lo encontró una vez se hace actualización en la tabla tbllogbancario, de los campos planilla, sr, conciliado, lote, fechaconc, usuarioconc y documentoid
+En el registro tipo 1 se actualiza la fecha de pago
+
+ ///////////////////////////////////////////////////////
+Si no se encuentra registro se hace esta validación
+En la consulta se concatena el operador y la planilla, no se tiene en cuenta la fecha de pago y el nit se consulta con like
+(select * from tbllogbancario where documentoid like '$arr[id_empresa]%' and radicado='$plani' and valortotal='$total' and conciliado='0' and codigobanco = '007' and  oficina = '9999')
+Si lo encontró una vez se hace actualización en la tabla tbllogbancario, de los campos planilla, sr, conciliado, lote, fechaconc, usuarioconc y documentoid
+En el registro tipo 1 se actualiza la fecha de pago
+
+///////////////////////////////////////////////////////
+Si no se encuentra registro se hace esta validación
+Se hace consulta por los siguientes campos fechapago, total y se concatena operador y planilla ($plani)
+(select * from tbllogbancario where radicado='$plani' and valortotal='$total' and conciliado='0' and codigobanco = '007' and fechapago='$arr[fechapago]')
+Si lo encontró una vez se hace actualización en la tabla tbllogbancario, de los campos planilla, sr, conciliado, lote, fechaconc, usuarioconc y documentoid
+
+Si no se encontró el registro se inserta en la tabla rezagos
+
+11.	Validaciones tipo_planilla = N
+•	Si el campo fecha_pago_asociada llega vacio se actualiza con la información que viene reportada en el campo fechapago, toca guardar en la tabla de rezago que se presentó la inconsistencia
+•	Si el campo planilla_asociada llega vacio se rechaza el aporte
+
+
+
+
+//------------------------------Validación Detalles---------------------------------------
+1.	Para la unificación de detalles a los tipo_planilla <> N protección va hacer un alcance al punto
+
+2.	Para la unificación de detalles a los tipo_planilla = N
+•	Se valida que los registros tengan información en el campo correcciones, sino se rechaza el plano (tabla pila devoluciones) y no se procesa el archivo, tener el cuenta que ya se corrió proceso de conciliación
+OK •	Se hace resta de registros C –A de los campos (DIAS, IBC,CO,CVE,CVA,FSP,FSS) y se borra el registro C  
+OK •	Si los días da mayor a 30 se deja 30
+
+OK 3.	Si los días son >30 y no se reporta alguna novedad, hay que guardar en la tabla de rezago que se presentó la inconsistencia
+
+4.	Si el campo tipo_cotizante = 18 hay que crear una tabla con la siguiente información (tipo id, identificación, nombres y apellidos, periodo cotización, IBC reportado), informarle a protección para que proceda hacer las respectivas actualizaciones en el AS400, protección le informa a Imagine y Imagine genera plano para cargar en AS400
+Al mes siguiente si entra la misma CC no se informa a protección pero si se guarda el registro en la tabla 
+
+OK 5.	Si los campos de valores están en cero y no posee la novedad de SLN  se elimina registro
+
+OK 6.	Después de hacer las correcciones se hace count de los registros tipo 2 y se actualiza campos en el registro tipo 1 en el campo   registros_tipo2
+
+7.	Los registros que vengan con tipo de identificación PAS toca pasárselos a protección para que hagan correcciones en AS400
+
+
+
+
+
+
+
+
+//------------------------------Validación totales---------------------------------------
+OK 1.	Se suman los campos del registro tipo 2 
+Ibc, cotizacion_obli, cotizacion_voluntaria_af, cotizacion_voluntaria_aportante, total_cot, fsp, afsp
+Y se comparan con los totales del registro tipo 3 con 31
+Si hay diferencias registro tipo 2 mayor al registro tipo 3 con 31 se hacen las actualizaciones correspondientes en el registro tipo 3 con 31
+
+JENRY LO TIENE MAL EN EL PHP 2.	Se sumas los valores del registro tipo 3 con 31 con los 	valores del registro tipo 3 con 36
+Y se comparan con los valores del registro tipo 3 con 39
+Si hay diferencias registro tipo 31+36 mayor al registro tipo 3 con 39 se hacen las actualizaciones correspondientes en el registro tipo 3 con 39
+
+	
